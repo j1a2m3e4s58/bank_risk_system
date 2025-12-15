@@ -96,3 +96,17 @@ class RiskAssessment(models.Model):
 
     def __str__(self):
         return f"{self.reference_id} - {self.description[:30]}"
+
+
+# --- NEW REPORT CONFIGURATION MODEL ---
+class ReportConfiguration(models.Model):
+    """Stores the editable text for the Official Report"""
+    executive_summary = models.TextField(default="This document contains the official record of identified operational and financial risks.")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return "Official Report Settings"
+        
+    class Meta:
+        # This creates the specific permission we need: 'risks.view_reportconfiguration'
+        verbose_name = "Report Settings"
