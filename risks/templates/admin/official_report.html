@@ -5,105 +5,173 @@
     <title>Official Risk Report</title>
     <style>
         /* LANDSCAPE MODE */
-        @page { size: A4 landscape; margin: 1cm; }
+        @page { size: A4 landscape; margin: 0.5cm; }
         
-        /* 1. INCREASED BASE FONT SIZE */
         body { 
-            font-family: 'Times New Roman', Times, serif; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             color: #000; 
             padding: 20px; 
-            max-width: 100%; 
+            width: 100%; 
             margin: 0 auto; 
         }
         
         .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 25px; }
-        .logo-text { font-size: 28px; font-weight: bold; text-transform: uppercase; }
-        .sub-text { font-size: 16px; color: #333; margin-top: 5px; font-weight: bold; }
+        .logo-text { font-size: 24px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+        .sub-text { font-size: 14px; color: #333; margin-top: 5px; font-weight: bold; }
         
-        /* 2. INCREASED TABLE FONT SIZE */
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px; }
-        th, td { border: 1px solid #000; padding: 8px; text-align: left; vertical-align: top; }
+        /* TABLE STYLES */
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px; }
+        th, td { border: 1px solid #444; padding: 6px; text-align: left; vertical-align: middle; }
+        
+        /* EDIT MODE STYLES */
+        .editable-active td { cursor: text; border: 1px dashed #2196f3; }
+        .editable-active td:focus { background-color: #e3f2fd; outline: none; }
         
         /* HEADER COLORS */
-        .head-gray { background-color: #f0f0f0; font-weight: bold; font-size: 14px; }
-        .head-inherent { background-color: #e3f2fd; text-align: center; font-weight: bold; border-bottom: 2px solid #000; font-size: 14px; }
-        .head-residual { background-color: #e8f5e9; text-align: center; font-weight: bold; border-bottom: 2px solid #000; font-size: 14px; }
+        .col-id { background-color: #f0f0f0; width: 3%; }
+        .col-category { background-color: #f0f0f0; width: 8%; }
+        .col-desc { background-color: #f0f0f0; width: 15%; }
         
-        /* RATING COLORS */
-        .rating-Critical { background-color: #ffebee; color: #c62828; font-weight: bold; }
-        .rating-Severe { background-color: #fff3e0; color: #ef6c00; font-weight: bold; }
-        .rating-Moderate { background-color: #fffde7; color: #f9a825; font-weight: bold; }
-        .rating-Sustainable { background-color: #e8f5e9; color: #2e7d32; font-weight: bold; }
+        /* --- UPDATED COLORS START HERE --- */
         
-        /* SIGNATURES */
-        .signatures { display: flex; justify-content: space-between; margin-top: 50px; page-break-inside: avoid; }
-        .sig-block { width: 30%; border-top: 2px solid #000; padding-top: 10px; text-align: center; font-size: 14px; font-weight: bold; }
+        /* 1. LIKELIHOOD - Grey */
+        .col-likelihood { background-color: #808080 !important; color: white; width: 5%; text-align: center; }
+        
+        /* 2. IMPACT - Lemon Green */
+        .col-impact { background-color: #ADFF2F !important; color: black; width: 5%; text-align: center; }
+        
+        /* 3. RISK RANK - Orange (Kept as before) */
+        .col-rank { background-color: #FFA500 !important; color: black; font-weight: bold; width: 5%; text-align: center; }
+        
+        /* 4. RISK TRIGGER - Red */
+        .col-trigger { background-color: #FF0000 !important; color: white; width: 12%; }
+        
+        /* --- UPDATED COLORS END HERE --- */
 
-        /* ADMIN CONTROLS */
-        .admin-controls { background: #e3f2fd; padding: 15px; border: 1px solid #2196f3; margin-bottom: 20px; border-radius: 5px; }
-        textarea { width: 100%; height: 80px; padding: 10px; font-family: inherit; font-size: 14px; }
-        .save-btn { background: #2196f3; color: white; border: none; padding: 8px 15px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .col-residual { background-color: #006400 !important; color: white; font-weight: bold; width: 9%; text-align: center; }
 
-        .print-btn-container { text-align: right; margin-bottom: 15px; }
-        .print-btn { background-color: #007bff; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; font-weight: bold; font-size: 14px; }
+        /* SIGNATURE STYLES */
+        .signatures { 
+            display: flex; 
+            justify-content: space-between; 
+            margin-top: 80px; 
+            page-break-inside: avoid; 
+        }
+        .sig-block { 
+            width: 30%; 
+            border-top: 1px solid #000; 
+            padding-top: 10px; 
+            text-align: center; 
+            font-size: 14px; 
+            font-weight: bold; 
+        }
+
+        /* BUTTONS */
+        .btn-container { text-align: right; margin-bottom: 15px; display: flex; justify-content: flex-end; gap: 10px; }
+        .btn { border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; font-weight: bold; font-size: 12px; transition: all 0.3s ease; }
+        
+        .btn-edit { background-color: #ff9800; color: white; }
+        .btn-excel { background-color: #2e7d32; color: white; }
+        .btn-print { background-color: #007bff; color: white; }
+        
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn.active { background-color: #e65100; box-shadow: inset 0 0 5px rgba(0,0,0,0.5); }
+
+        /* ADMIN EDIT BOX */
+        .admin-controls { background: #e3f2fd; padding: 10px; border: 1px solid #2196f3; margin-bottom: 15px; border-radius: 5px; }
+        textarea { width: 100%; height: 60px; padding: 5px; font-family: inherit; font-size: 12px; }
 
         @media print {
-            .print-btn-container, .admin-controls { display: none; }
-            body { padding: 0; margin: 0; width: 100%; }
-            
-            /* FORCE PRINT COLORS */
-            .rating-Critical { background-color: #ffebee !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .rating-Severe { background-color: #fff3e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .rating-Moderate { background-color: #fffde7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .rating-Sustainable { background-color: #e8f5e9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .head-inherent { background-color: #e3f2fd !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .head-residual { background-color: #e8f5e9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .btn-container, .admin-controls { display: none; }
+            body { padding: 0; margin: 0; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .editable-active td { border: 1px solid #444 !important; }
         }
     </style>
+    
+    <script>
+        function exportTableToExcel(tableID, filename = ''){
+            var downloadLink;
+            var dataType = 'application/vnd.ms-excel';
+            var tableSelect = document.getElementById(tableID);
+            var tableHTML = tableSelect.outerHTML.replace(/ /g, '%20');
+            filename = filename?filename+'.xls':'excel_data.xls';
+            downloadLink = document.createElement("a");
+            document.body.appendChild(downloadLink);
+            
+            if(navigator.msSaveOrOpenBlob){
+                var blob = new Blob(['\ufeff', tableHTML], { type: dataType });
+                navigator.msSaveOrOpenBlob( blob, filename);
+            }else{
+                downloadLink.href = 'data:' + dataType + ', ' + tableHTML;
+                downloadLink.download = filename;
+                downloadLink.click();
+            }
+        }
+
+        function toggleEditMode() {
+            var table = document.getElementById("riskTable");
+            var btn = document.getElementById("editBtn");
+            var isEditable = table.contentEditable === "true";
+
+            if (isEditable) {
+                table.contentEditable = "false";
+                table.classList.remove("editable-active");
+                btn.innerHTML = "✏️ ENABLE EDITING";
+                btn.classList.remove("active");
+                alert("Editing Disabled. You can now Print or Export.");
+            } else {
+                table.contentEditable = "true";
+                table.classList.add("editable-active");
+                btn.innerHTML = "💾 FINISH EDITING";
+                btn.classList.add("active");
+                alert("📝 EDIT MODE ACTIVE\n\nClick any cell to change the text.\nChanges will appear in Excel & Print.\n(Note: Changes are temporary and not saved to database)");
+            }
+        }
+    </script>
 </head>
 <body>
 
-    <div class="print-btn-container">
-        <button onclick="window.print()" class="print-btn">🖨️ PRINT LANDSCAPE REPORT</button>
+    <div class="btn-container">
+        <button id="editBtn" onclick="toggleEditMode()" class="btn btn-edit">✏️ ENABLE EDITING</button>
+        <button onclick="exportTableToExcel('riskTable', 'Risk_Report_Export')" class="btn btn-excel">📥 EXPORT TO EXCEL</button>
+        <button onclick="window.print()" class="btn btn-print">🖨️ PRINT REPORT</button>
     </div>
 
     <div class="header">
         <div class="logo-text">Bank Risk Management System</div>
-        <div class="sub-text">Enterprise Risk Register & Audit Report</div>
-        <div class="sub-text">Generated on: {{ generated_at|date:"F j, Y, g:i a" }} | By: {{ generated_by }}</div>
+        <div class="sub-text">Official Risk Register Report</div>
+        <div class="sub-text" style="font-size: 12px; color: #555;">Generated: {{ generated_at|date:"Y-m-d H:i" }} | User: {{ generated_by }}</div>
     </div>
 
-    <h3>Executive Summary</h3>
     {% if is_admin %}
         <form method="POST" class="admin-controls">
             {% csrf_token %}
-            <label style="font-weight:bold; display:block; margin-bottom:5px;">✏️ Edit Report Text (Admin Only):</label>
+            <label style="font-weight:bold; display:block; margin-bottom:5px;">✏️ Executive Summary (Admin):</label>
             <textarea name="executive_summary">{{ config.executive_summary }}</textarea>
             <div style="text-align:right; margin-top:5px;">
-                <button type="submit" class="save-btn">💾 Save Changes</button>
+                <button type="submit" class="btn" style="background:#2196f3; color:white;">💾 Save Summary</button>
             </div>
         </form>
     {% else %}
-        <p style="font-size:14px; margin-bottom:25px; line-height: 1.5;">{{ config.executive_summary }}</p>
+        <p style="font-size:12px; margin-bottom:20px;">{{ config.executive_summary }}</p>
     {% endif %}
 
-    <table>
+    <table id="riskTable">
         <thead>
             <tr>
-                <th rowspan="2" class="head-gray" style="width: 5%;">ID</th>
-                <th rowspan="2" class="head-gray" style="width: 10%;">Area</th>
-                <th rowspan="2" class="head-gray" style="width: 10%;">Risk Owner</th>
-                <th rowspan="2" class="head-gray" style="width: 25%;">Risk Details (Desc, Cause, Impact)</th>
-                <th colspan="3" class="head-inherent">🔴 INHERENT RISK (Before)</th>
-                <th colspan="3" class="head-residual">🟢 RESIDUAL RISK (After)</th>
-            </tr>
-            <tr>
-                <th style="width: 6%; text-align:center;">Prob</th>
-                <th style="width: 6%; text-align:center;">Impact</th>
-                <th style="width: 6%; text-align:center;">Rating</th>
-                <th style="width: 6%; text-align:center;">Prob</th>
-                <th style="width: 6%; text-align:center;">Impact</th>
-                <th style="width: 6%; text-align:center;">Rating</th>
+                <th class="col-id">ID</th>
+                <th class="col-category">Risk Category</th>
+                <th class="col-desc">Risk Description</th>
+                <th class="col-likelihood">Likelihood</th>
+                <th class="col-impact">Impact</th>
+                <th class="col-rank">Risk Rank</th>
+                <th class="col-trigger">Risk Trigger (Root Cause)</th>
+                <th class="col-controls">Prevention Controls</th>
+                <th class="col-treatment">Risk Treatment</th>
+                <th class="col-owner">Risk Owner</th>
+                <th class="col-coordinator">Coordinator</th>
+                <th class="col-residual">Residual Risk</th>
             </tr>
         </thead>
         <tbody>
@@ -111,39 +179,39 @@
             <tr>
                 <td style="font-weight:bold;">{{ risk.reference_id }}</td>
                 <td>{{ risk.area_name }}</td>
-                <td>{{ risk.risk_owner }}</td>
-                <td>
-                    <div style="color: #002366; font-weight: 900; font-size: 15px; margin-bottom: 5px;">
-                        <span style="color: #000; font-weight: bold;">Description:</span> {{ risk.description }}
-                    </div>
-                    
-                    <div style="color: #8B0000; font-weight: 800; border-top: 1px solid #ccc; padding-top: 4px; margin-bottom: 5px;">
-                        <span style="color: #000; font-weight: bold;">Root Cause:</span> {{ risk.caused_by }}
-                    </div>
-
-                    <div style="color: #4B0082; font-weight: 800; border-top: 1px solid #ccc; padding-top: 4px;">
-                        <span style="color: #000; font-weight: bold;">Consequences:</span> {{ risk.consequences }}
-                    </div>
-                </td>
+                <td>{{ risk.description }}</td>
                 
-                <td style="text-align:center; vertical-align: middle;">{{ risk.inherent_probability }}</td>
-                <td style="text-align:center; vertical-align: middle;">{{ risk.inherent_impact }}</td>
-                <td class="rating-{{ risk.inherent_rating }}" style="text-align:center; vertical-align: middle;">{{ risk.inherent_rating }}</td>
-
-                <td style="text-align:center; vertical-align: middle;">{{ risk.residual_probability }}</td>
-                <td style="text-align:center; vertical-align: middle;">{{ risk.residual_impact }}</td>
-                <td class="rating-{{ risk.residual_rating }}" style="text-align:center; vertical-align: middle;">{{ risk.residual_rating }}</td>
+                <td class="col-likelihood" style="border: 1px solid #fff;">{{ risk.inherent_probability }}</td>
+                <td class="col-impact" style="border: 1px solid #000;">{{ risk.inherent_impact }}</td>
+                <td class="col-rank" style="border: 1px solid #000;">{{ risk.inherent_rating }}</td>
+                <td class="col-trigger" style="border: 1px solid #000;">{{ risk.caused_by }}</td>
+                
+                <td>{{ risk.control_description|default:"Standard Controls" }}</td>
+                <td>Mitigate</td>
+                <td>{{ risk.risk_owner }}</td>
+                <td>{{ risk.risk_coordinator|default:"-" }}</td>
+                
+                <td class="col-residual" style="border: 1px solid #fff;">{{ risk.residual_rating }}</td>
             </tr>
             {% empty %}
-            <tr><td colspan="10" style="text-align:center; padding: 20px;">No risks recorded.</td></tr>
+            <tr><td colspan="12" style="text-align:center; padding: 20px;">No risks recorded.</td></tr>
             {% endfor %}
         </tbody>
     </table>
 
     <div class="signatures">
-        <div class="sig-block">Chief Risk Officer<br><small>(Sign & Date)</small></div>
-        <div class="sig-block">Internal Auditor<br><small>(Sign & Date)</small></div>
-        <div class="sig-block">Board Chairman<br><small>(Sign & Date)</small></div>
+        <div class="sig-block">
+            Chief Risk Officer
+            <br><small style="font-weight: normal;">(Sign & Date)</small>
+        </div>
+        <div class="sig-block">
+            Internal Auditor
+            <br><small style="font-weight: normal;">(Sign & Date)</small>
+        </div>
+        <div class="sig-block">
+            Board Chairman
+            <br><small style="font-weight: normal;">(Sign & Date)</small>
+        </div>
     </div>
 
 </body>
