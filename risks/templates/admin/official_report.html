@@ -136,6 +136,10 @@
         <button id="editBtn" onclick="toggleEditMode()" class="btn btn-edit">✏️ ENABLE EDITING</button>
         <button onclick="exportTableToExcel('riskTable', 'Risk_Report_Export')" class="btn btn-excel">📥 EXPORT TO EXCEL</button>
         <button onclick="window.print()" class="btn btn-print">🖨️ PRINT REPORT</button>
+        <!-- ========= AI_EXTRACT_START ========= -->
+<a href="/ai-extract/" class="btn" style="background:#6a1b9a; color:white; text-decoration:none; display:inline-block; padding:10px 20px; border-radius:5px; font-weight:bold; font-size:12px;">🤖 AI EXTRACT (Paste KRI)</a>
+<!-- ========= AI_EXTRACT_END ========= -->
+
     </div>
 
     <div class="header">
@@ -175,28 +179,37 @@
             </tr>
         </thead>
         <tbody>
-            {% for risk in risks %}
-            <tr>
-                <td style="font-weight:bold;">{{ risk.reference_id }}</td>
-                <td>{{ risk.area_name }}</td>
-                <td>{{ risk.description }}</td>
-                
-                <td class="col-likelihood" style="border: 1px solid #fff;">{{ risk.inherent_probability }}</td>
-                <td class="col-impact" style="border: 1px solid #000;">{{ risk.inherent_impact }}</td>
-                <td class="col-rank" style="border: 1px solid #000;">{{ risk.inherent_rating }}</td>
-                <td class="col-trigger" style="border: 1px solid #000;">{{ risk.caused_by }}</td>
-                
-                <td>{{ risk.control_description|default:"Standard Controls" }}</td>
-                <td>Mitigate</td>
-                <td>{{ risk.risk_owner }}</td>
-                <td>{{ risk.risk_coordinator|default:"-" }}</td>
-                
-                <td class="col-residual" style="border: 1px solid #fff;">{{ risk.residual_rating }}</td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="12" style="text-align:center; padding: 20px;">No risks recorded.</td></tr>
-            {% endfor %}
-        </tbody>
+    {% for dept, dept_risks in grouped_risks.items %}
+        <tr>
+            <td colspan="12" style="font-weight:bold; background:#000; color:#fff; padding:8px;">
+                {{ dept }}
+            </td>
+        </tr>
+
+        {% for risk in dept_risks %}
+        <tr>
+            <td style="font-weight:bold;">{{ risk.reference_id }}</td>
+            <td>{{ risk.area_name }}</td>
+            <td>{{ risk.description }}</td>
+
+            <td class="col-likelihood" style="border: 1px solid #fff;">{{ risk.inherent_probability }}</td>
+            <td class="col-impact" style="border: 1px solid #000;">{{ risk.inherent_impact }}</td>
+            <td class="col-rank" style="border: 1px solid #000;">{{ risk.inherent_rating }}</td>
+            <td class="col-trigger" style="border: 1px solid #000;">{{ risk.caused_by }}</td>
+
+            <td>{{ risk.control_description|default:"Standard Controls" }}</td>
+            <td>Mitigate</td>
+            <td>{{ risk.risk_owner }}</td>
+            <td>{{ risk.risk_coordinator|default:"-" }}</td>
+
+            <td class="col-residual" style="border: 1px solid #fff;">{{ risk.residual_rating }}</td>
+        </tr>
+        {% endfor %}
+    {% empty %}
+        <tr><td colspan="12" style="text-align:center; padding: 20px;">No risks recorded.</td></tr>
+    {% endfor %}
+</tbody>
+
     </table>
 
     <div class="signatures">

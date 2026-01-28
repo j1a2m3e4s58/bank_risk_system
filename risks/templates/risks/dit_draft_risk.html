@@ -1,0 +1,82 @@
+<!-- ========= AI_DRAFT_EDIT_TEMPLATE_START ========= -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Draft Risk</title>
+    <style>
+        label { font-weight: bold; margin-top: 10px; display: block; }
+        textarea, select, input { width: 100%; padding: 6px; }
+        .box { max-width: 900px; margin: auto; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h2>Edit Draft Risk</h2>
+    <p><b>Reference:</b> {{ risk.reference_id }}</p>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <label>Area Name</label>
+        <input name="area_name" value="{{ risk.area_name }}">
+
+        <label>Risk Description</label>
+        <textarea name="description">{{ risk.description }}</textarea>
+
+        <label>Root Cause</label>
+        <textarea name="caused_by">{{ risk.caused_by }}</textarea>
+
+        <label>Consequences</label>
+        <textarea name="consequences">{{ risk.consequences }}</textarea>
+
+        <label>Risk Owner</label>
+        <input name="risk_owner" value="{{ risk.risk_owner }}">
+
+        <label>Controls</label>
+        <textarea name="controls">{{ risk.controls }}</textarea>
+
+        <label>Control Owner</label>
+        <input name="control_owner" value="{{ risk.control_owner }}">
+
+        <label>Inherent Probability</label>
+        <select name="inherent_probability">
+            <option value="">-- select --</option>
+            {% for v,l in prob_choices %}
+                <option value="{{ v }}" {% if risk.inherent_probability == v %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+        </select>
+
+        <label>Inherent Impact</label>
+        <select name="inherent_impact">
+            <option value="">-- select --</option>
+            {% for v,l in impact_choices %}
+                <option value="{{ v }}" {% if risk.inherent_impact == v %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+        </select>
+
+        <label>Residual Probability</label>
+        <select name="residual_probability">
+            <option value="">-- select --</option>
+            {% for v,l in prob_choices %}
+                <option value="{{ v }}" {% if risk.residual_probability == v %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+        </select>
+
+        <label>Residual Impact</label>
+        <select name="residual_impact">
+            <option value="">-- select --</option>
+            {% for v,l in impact_choices %}
+                <option value="{{ v }}" {% if risk.residual_impact == v %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+        </select>
+
+        <br><br>
+        <button type="submit">💾 Save Draft</button>
+        <a href="{% url 'dashboard' %}">Cancel</a>
+    </form>
+</div>
+
+</body>
+</html>
+<!-- ========= AI_DRAFT_EDIT_TEMPLATE_END ========= -->

@@ -2,6 +2,7 @@ from django.db import models
 from django.utils import timezone
 from django.conf import settings
 
+
 class RiskAssessment(models.Model):
     # --- DROPDOWN CHOICES ---
     PROBABILITY_CHOICES = [
@@ -31,7 +32,7 @@ class RiskAssessment(models.Model):
     reference_id = models.CharField(max_length=20, unique=True, help_text="Unique ID (e.g., RISK-001)")
     area_name = models.CharField(max_length=100, blank=True, null=True, help_text="Department or Area (e.g. IT, Finance)")
     description = models.TextField(verbose_name="Risk Description")
-    
+
     # --- NEW SEPARATE FIELDS ---
     caused_by = models.TextField(verbose_name="Root Cause", blank=True, default="", help_text="What triggers this risk?")
     consequences = models.TextField(verbose_name="Consequences", blank=True, default="", help_text="What happens if this risk occurs?")
@@ -56,10 +57,10 @@ class RiskAssessment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='risks_updated'
     )
 
@@ -70,7 +71,7 @@ class RiskAssessment(models.Model):
            (prob == 'High' and impact in ['Very High', 'High']) or \
            (prob == 'Medium' and impact == 'Very High'):
             return 'Critical'
-        
+
         # 2. Severe (Orange)
         if (prob == 'Very High' and impact == 'Low') or \
            (prob == 'High' and impact == 'Medium') or \
@@ -94,6 +95,18 @@ class RiskAssessment(models.Model):
         self.residual_rating = self.calculate_rating(self.residual_probability, self.residual_impact)
         super().save(*args, **kwargs)
 
+    # ========= AUTO_FILL_PROPERTIES_START =========
+    @property
+    def control_description(self):
+        # official_report.html expects this name
+        return self.controls or "Standard Controls"
+
+    @property
+    def risk_coordinator(self):
+        # official_report.html expects this name
+        return "-"
+    # ========= AUTO_FILL_PROPERTIES_END =========
+
     def __str__(self):
         return f"{self.reference_id} - {self.description[:30]}"
 
@@ -106,7 +119,17 @@ class ReportConfiguration(models.Model):
 
     def __str__(self):
         return "Official Report Settings"
-        
+
     class Meta:
         # This creates the specific permission we need: 'risks.view_reportconfiguration'
         verbose_name = "Report Settings"
+
+
+# ========= AI_SETTINGS_START =========
+class AISettings(models.Model):
+    enable_ai = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return "AI Settings"
+# ========= AI_SETTINGS_END =========

@@ -6,31 +6,27 @@
     <title>Enterprise Risk Monitor | v2.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <style>
         body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .navbar-custom { background: #1a237e; color: white; padding: 15px 30px; }
         .btn-nav { border: 1px solid rgba(255,255,255,0.4); color: white; margin-left: 10px; font-size: 0.9rem; }
         .btn-nav:hover { background: rgba(255,255,255,0.2); color: white; }
-        
-        /* MATRIX STYLES */
+
         .matrix-container { display: flex; align-items: center; justify-content: center; }
         .matrix-table { border-collapse: separate; border-spacing: 3px; width: 100%; }
         .y-axis-label { writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; font-weight: bold; color: #1a237e; margin-right: 5px; font-size: 0.8rem; }
         .x-axis-label { text-align: center; font-weight: bold; color: #1a237e; margin-top: 5px; font-size: 0.8rem; }
         .matrix-table th { font-size: 0.75rem; text-align: center; color: #666; font-weight: normal; }
         .matrix-table td { width: 50px; height: 40px; text-align: center; vertical-align: middle; border-radius: 4px; color: white; font-weight: bold; font-size: 1.1rem; text-shadow: 0 1px 2px rgba(0,0,0,0.2); border: 1px solid rgba(0,0,0,0.05); }
-        
-        /* COLORS & BADGES */
+
         .bg-critical { background-color: #d32f2f; color: white; }
         .bg-severe { background-color: #f57c00; color: white; }
         .bg-moderate { background-color: #fbc02d; color: #333 !important; text-shadow: none !important; }
         .bg-sustainable { background-color: #388e3c; color: white; }
-        
-        /* LEGEND BADGES (New) */
+
         .legend-badge { display: inline-block; padding: 5px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; margin: 0 2px; }
 
-        /* CARDS */
         .card { border: none; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .card-header { background: white; border-bottom: 2px solid #f0f0f0; font-weight: 800; color: #333; padding: 15px; font-size: 1rem; }
     </style>
@@ -53,24 +49,76 @@
 </nav>
 
 <div class="container-fluid px-4 py-4">
-    
+
+    {% if request.GET.cleared %}
+        <div class="alert alert-success text-center">✅ System cleared: all risks deleted.</div>
+    {% endif %}
+
     <div class="row mb-3">
         <div class="col-12 text-center">
             <h2 class="fw-bold text-dark">Risk Heatmap Dashboard</h2>
             <p class="text-muted">Real-time visualization of Inherent vs. Residual Risk Exposure</p>
-            
+
+            <div class="mb-3 text-center">
+                <form method="get" class="d-inline">
+                    <label class="me-2 fw-bold">Department:</label>
+                    <select name="area" onchange="this.form.submit()">
+                        <option value="">All Departments</option>
+                        {% for a in available_areas %}
+                            <option value="{{ a }}" {% if selected_area == a %}selected{% endif %}>{{ a }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="hidden" name="filter" value="{{ filter_type|default:'all' }}">
+                </form>
+
+                <div class="mt-2">
+                    <a href="?filter=all{% if selected_area %}&area={{ selected_area|urlencode }}{% endif %}" class="btn btn-sm btn-outline-dark">All Risks</a>
+                    <a href="?filter=draft{% if selected_area %}&area={{ selected_area|urlencode }}{% endif %}" class="btn btn-sm btn-outline-warning">📝 Drafts</a>
+                    <a href="?filter=approved{% if selected_area %}&area={{ selected_area|urlencode }}{% endif %}" class="btn btn-sm btn-outline-success">✅ Approved</a>
+                </div>
+            </div>
+
             {% if user.is_staff %}
             <div class="mt-3">
                 <a href="{% url 'official_report' %}" target="_blank" class="btn btn-success shadow-sm px-4 fw-bold">
                     <i class="fas fa-file-pdf me-2"></i> GENERATE OFFICIAL REPORT
                 </a>
+
+                <a href="/ai-extract/" class="btn btn-warning shadow-sm px-4 fw-bold ms-2">
+                    🤖 AI EXTRACT (Paste KRI)
+                </a>
+            </div>
+
+            <div class="text-center mt-3">
+                <a href="{% url 'bulk-approve-drafts' %}"
+                   onclick="return confirm('Approve ALL draft risks? This cannot be undone.')"
+                   class="btn btn-danger btn-sm">
+                    ✅ Approve ALL Draft Risks
+                </a>
+
+                <a href="{% url 'export-csv-clear' %}"
+                   onclick="return confirm('Export CSV AND CLEAR ALL RISKS? This will delete all risks after download.')"
+                   class="btn btn-dark btn-sm ms-2">
+                    📥 Export CSV & Clear
+                </a>
+
+                <form method="post" action="{% url 'clear-risks' %}" class="d-inline ms-2">
+                    {% csrf_token %}
+                    <button type="submit"
+                            onclick="return confirm('CLEAR ALL RISKS NOW? This cannot be undone.')"
+                            class="btn btn-outline-dark btn-sm">
+                        🧹 Clear Risks Only
+                    </button>
+                </form>
             </div>
             {% endif %}
+
         </div>
     </div>
 
+    <!-- (Heatmap cards stay same as your last working version; unchanged) -->
     <div class="row g-4 justify-content-center">
-        
+
         <div class="col-lg-4 col-md-6">
             <div class="card h-100">
                 <div class="card-header text-primary border-primary">1. Master Risk Legend</div>
@@ -101,11 +149,12 @@
             </div>
         </div>
 
+        <!-- Inherent -->
         <div class="col-lg-4 col-md-6">
             <div class="card h-100">
                 <div class="card-header text-danger border-danger">2. Inherent Risk (Before)</div>
                 <div class="card-body">
-                     <div class="matrix-container">
+                    <div class="matrix-container">
                         <div class="y-axis-label">PROBABILITY</div>
                         <div>
                             <table class="matrix-table">
@@ -153,11 +202,12 @@
             </div>
         </div>
 
+        <!-- Residual -->
         <div class="col-lg-4 col-md-6">
             <div class="card h-100">
                 <div class="card-header text-success border-success">3. Residual Risk (After)</div>
                 <div class="card-body">
-                     <div class="matrix-container">
+                    <div class="matrix-container">
                         <div class="y-axis-label">PROBABILITY</div>
                         <div>
                             <table class="matrix-table">
@@ -204,13 +254,15 @@
                 </div>
             </div>
         </div>
+
     </div>
-    
+
     <div class="card mt-4">
         <div class="card-header d-flex justify-content-between align-items-center">
             <span>Detailed Risk Register</span>
             <a href="{% url 'export-csv' %}" class="btn btn-primary btn-sm">⬇ Export CSV</a>
         </div>
+
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-striped table-hover align-middle mb-0">
@@ -224,28 +276,41 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for risk in risks %}
-                        <tr>
-                            <td class="fw-bold">{{ risk.reference_id }}</td>
-                            <td>
-                                <div class="fw-bold text-dark mb-1">{{ risk.description }}</div>
-                                <div class="small text-muted" style="font-size: 0.85rem;">
-                                    <span class="text-danger fw-bold">Cause:</span> {{ risk.caused_by|default:"N/A" }}<br>
-                                    <span class="text-primary fw-bold">Impact:</span> {{ risk.consequences|default:"N/A" }}
-                                </div>
-                            </td>
-                            <td><span class="badge bg-{{ risk.inherent_rating|lower }}">{{ risk.inherent_rating }}</span></td>
-                            <td><span class="badge bg-{{ risk.residual_rating|lower }}">{{ risk.residual_rating }}</span></td>
-                            <td>{{ risk.risk_owner }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="5" class="text-center py-4">No risks recorded yet.</td></tr>
-                        {% endfor %}
+                        {% regroup risks by area_name as area_groups %}
+
+{% for group in area_groups %}
+<tr class="table-secondary">
+    <td colspan="5" class="fw-bold">
+        {{ group.grouper }}
+    </td>
+</tr>
+
+{% for risk in group.list %}
+<tr>
+    <td class="fw-bold">{{ risk.reference_id }}</td>
+    <td>
+        <div class="fw-bold">{{ risk.description }}</div>
+        <div class="small text-muted">
+            <b>Cause:</b> {{ risk.caused_by }}<br>
+            <b>Impact:</b> {{ risk.consequences }}
+        </div>
+    </td>
+    <td><span class="badge bg-{{ risk.inherent_rating|risk_color }}">
+{{ risk.inherent_rating }}</span></td>
+    <td><span class="badge bg-{{ risk.residual_rating|risk_color }}">
+{{ risk.residual_rating }}</span></td>
+    <td>{{ risk.risk_owner }}</td>
+</tr>
+{% endfor %}
+
+{% endfor %}
+
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
+
 </div>
 
 </body>

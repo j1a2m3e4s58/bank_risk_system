@@ -1,0 +1,113 @@
+<!-- ========= AI_EXTRACT_TEMPLATE_START ========= -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>AI Extract - Risk Drafts</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 16px; }
+        textarea { width: 100%; height: 180px; }
+        .box { border: 1px solid #ccc; padding: 10px; margin-top: 12px; }
+        .err { color: #b00020; font-weight: bold; }
+        .small { font-size: 12px; color: #555; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+        .copyhint { font-size: 12px; color: #444; margin-bottom: 6px; }
+        .btnrow { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+        button { padding: 10px 14px; cursor: pointer; }
+        a { text-decoration: none; }
+    </style>
+</head>
+<body>
+
+    <h2>Add Risk Assessment (Auto Extract)</h2>
+
+    <div class="small">
+        <a href="{% url 'dashboard' %}">⬅ Back to Dashboard</a>
+    </div>
+
+    <!-- Optional saved message support -->
+    {% if request.GET.saved %}
+        <div class="box"><b>Saved:</b> {{ request.GET.saved }} risks.</div>
+    {% endif %}
+
+    {% if error %}
+        <div class="err">{{ error }}</div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <p class="small">Paste your KRI table text below, then click Extract.</p>
+        <textarea name="raw_text">{{ raw_text }}</textarea>
+        <div class="btnrow">
+            <button type="submit">Extract</button>
+        </div>
+    </form>
+
+    {% if raw_text %}
+        <div class="btnrow">
+            <!-- ========= AI_EXTRACT_DRAFT_SAVE_START ========= -->
+            <form method="post" action="{% url 'ai-extract-save' %}">
+                {% csrf_token %}
+                <input type="hidden" name="raw_text" value="{{ raw_text|escape }}">
+                <button type="submit">💾 Save Draft Risks to Database</button>
+                <div class="small" style="margin-top:6px;">
+                    Saves extracted items as <b>[DRAFT]</b> in your Risk Register.
+                </div>
+            </form>
+            <!-- ========= AI_EXTRACT_DRAFT_SAVE_END ========= -->
+
+            <!-- ========= AI_SAVE_APPROVE_UI_START ========= -->
+            <form method="post" action="{% url 'ai-extract-save-approve' %}">
+    {% csrf_token %}
+    <input type="hidden" name="raw_text" value="{{ raw_text|escape }}">
+    <button type="submit">✅ Save &amp; Approve Now (No Draft)</button>
+</form>
+
+            <!-- ========= AI_SAVE_APPROVE_UI_END ========= -->
+        </div>
+    {% endif %}
+
+    {% if results %}
+        <div class="box">
+            <div><b>Area name:</b> {{ area_name }}</div>
+            <div><b>Reporting period:</b> {{ reporting_period }}</div>
+            <div class="small">Extracted risks: {{ results|length }}</div>
+        </div>
+
+        {% for r in results %}
+            <div class="box">
+                <div class="copyhint">Preview (what will be saved):</div>
+
+<pre><b>Add risk assessment</b>
+
+<b>Risk Identification</b>
+Reference id: {{ r.reference_id }}
+Area name: {{ r.area_name }}
+Risk owner: {{ r.risk_owner }}
+
+<b>Risk Details</b>
+Risk Description: {{ r.risk_description }}
+Root Cause: {{ r.root_cause }}
+What triggers this risk?: {{ r.trigger }}
+Consequences: {{ r.consequences }}
+
+<b>Inherent Risk (Before Controls)</b>
+Inherent probability: {{ r.inherent_probability }}
+Inherent impact: {{ r.inherent_impact }}
+Inherent rating: {{ r.inherent_rating }}
+
+<b>Risk Mitigation</b>
+Control Descriptions: {{ r.control_descriptions }}
+Control owner: {{ r.control_owner }}
+
+<b>Residual Risk (After Controls)</b>
+Residual probability: {{ r.residual_probability }}
+Residual impact: {{ r.residual_impact }}
+Residual rating: {{ r.residual_rating }}</pre>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+</body>
+</html>
+<!-- ========= AI_EXTRACT_TEMPLATE_END ========= -->
