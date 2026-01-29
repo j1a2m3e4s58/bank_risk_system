@@ -21,6 +21,8 @@ class RiskAssessmentAdmin(admin.ModelAdmin):
         'residual_rating_colored',
         'updated_at',
         'updated_by',
+        'risk_coordinator_name',
+
     )
 
     list_filter = ('area_name', 'inherent_rating', 'residual_rating', 'risk_owner')
@@ -29,10 +31,12 @@ class RiskAssessmentAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Risk Identification', {
-            'fields': (
-                ('reference_id', 'area_name'),
-                'risk_owner',
-            ),
+    'fields': (
+        ('reference_id', 'area_name'),
+        'risk_owner',
+        'risk_coordinator_name',
+    ),
+
             'description': "Basic identification details.",
         }),
         ('Risk Details', {

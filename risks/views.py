@@ -585,23 +585,61 @@ def ai_extract_save_and_approve(request):
         "SUSU": "Head of Operations",
         "OPERATIONAL": "Head of Operations",
         "IT": "Head of IT",
+        "FINANCE": "Head of Finance",
+        "TREASURY": "Head of Treasury",
     }
 
-    owner = "Department Head"
-    for k, v in OWNER_MAP.items():
-        if k in area_name.upper():
-            owner = v
-            break
+    # ========= COORDINATOR_MAP_START =========
+    COORDINATOR_MAP = {
+        # Compliance / AML
+        "aml": "Compliance Officer",
+        "cft": "Compliance Officer",
+        "money laundering": "Compliance Officer",
+        "sanction": "Compliance Officer",
+        "regulatory": "Compliance Officer",
+        "fic": "Compliance Officer",
+        "bog": "Compliance Officer",
+
+        # Fraud / theft
+        "fraud": "Fraud & Investigations Officer",
+        "theft": "Fraud & Investigations Officer",
+        "misappropriation": "Fraud & Investigations Officer",
+        "robbery": "Security Coordinator",
+
+        # IT / systems
+        "system": "IT Support Lead",
+        "downtime": "IT Support Lead",
+        "alert": "IT Support Lead",
+        "verification system": "IT Support Lead",
+
+        # Treasury / liquidity
+        "liquidity": "Treasury Coordinator",
+        "reserve": "Treasury Coordinator",
+        "clearing": "Treasury Coordinator",
+        "settlement": "Treasury Coordinator",
+
+        # Customer / service
+        "complaint": "Customer Service Coordinator",
+        "reputational": "Customer Service Coordinator",
+
+        # HR / people
+        "staff": "HR Coordinator",
+        "training": "HR Coordinator",
+        "competency": "HR Coordinator",
+
+        "__default__": "Risk & Compliance Coordinator",
+    }
+    # ========= COORDINATOR_MAP_END =========
 
     counter = 1
 
     for ln in data_lines:
-        parts = split_row(ln)
-                # ===== SKIP TABLE HEADER ROW =====
+        # ===== SKIP TABLE HEADER ROW =====
         if "kri description" in ln.lower() and "related risk" in ln.lower():
             continue
         # ================================
 
+        parts = split_row(ln)
         if len(parts) < 3:
             continue
 
@@ -610,11 +648,26 @@ def ai_extract_save_and_approve(request):
         related_risk = parts[2] if len(parts) >= 3 else ""
         process = parts[3] if len(parts) >= 4 else ""
         occ = parts[4] if len(parts) >= 5 else ""
-        kri = parts[0] if len(parts) >= 1 else ""
-        kri_desc = parts[1] if len(parts) >= 2 else ""
-        related_risk = parts[2] if len(parts) >= 3 else ""
-        process = parts[3] if len(parts) >= 4 else ""
-        occ = parts[4] if len(parts) >= 5 else ""
+
+        # ========= OWNER_SELECT_START =========
+        owner = "Department Head"
+        for k, v in OWNER_MAP.items():
+            if k in area_name.upper():
+                owner = v
+                break
+        # ========= OWNER_SELECT_END =========
+
+        # ========= COORDINATOR_SELECT_START =========
+        combined_text = f"{kri} {kri_desc} {related_risk} {process}".lower()
+
+        coordinator = COORDINATOR_MAP.get("__default__", "Risk Coordinator")
+        for key, coord_name in COORDINATOR_MAP.items():
+            if key != "__default__" and key in combined_text:
+                coordinator = coord_name
+                break
+        # ========= COORDINATOR_SELECT_END =========
+
+        # (then continue with your skip-zero check, scoring, and create())
 
         # ===== SKIP ZERO OCCURRENCE RISKS =====
         if is_zero_occurrence(occ):
@@ -641,6 +694,7 @@ def ai_extract_save_and_approve(request):
                 caused_by=kri_desc,
                 consequences=related_risk,
                 risk_owner=owner,
+                risk_coordinator_name=coordinator,   # ✅ HERE
                 inherent_probability=inherent_prob,
                 inherent_impact=inherent_impact,
                 residual_probability=residual_prob,

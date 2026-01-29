@@ -39,6 +39,26 @@ class RiskAssessment(models.Model):
 
     risk_owner = models.CharField(max_length=100, help_text="Person responsible for this risk")
 
+    # ========= RISK_COORDINATOR_FIELD_START =========
+    risk_coordinator = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text="Coordinator for monitoring / reporting"
+    )
+    # ========= RISK_COORDINATOR_FIELD_END =========
+
+    # ========= RISK_COORDINATOR_NAME_FIELD_START =========
+    risk_coordinator_name = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text="Coordinator responsible for follow-up / reporting"
+    )
+    # ========= RISK_COORDINATOR_NAME_FIELD_END =========
+
+
+
     # --- INHERENT RISK (Before Controls) ---
     inherent_probability = models.CharField(max_length=20, choices=PROBABILITY_CHOICES)
     inherent_impact = models.CharField(max_length=20, choices=IMPACT_CHOICES)
@@ -95,7 +115,7 @@ class RiskAssessment(models.Model):
         self.residual_rating = self.calculate_rating(self.residual_probability, self.residual_impact)
         super().save(*args, **kwargs)
 
-    # ========= AUTO_FILL_PROPERTIES_START =========
+        # ========= AUTO_FILL_PROPERTIES_START =========
     @property
     def control_description(self):
         # official_report.html expects this name
@@ -104,8 +124,9 @@ class RiskAssessment(models.Model):
     @property
     def risk_coordinator(self):
         # official_report.html expects this name
-        return "-"
+        return self.risk_coordinator_name or "-"
     # ========= AUTO_FILL_PROPERTIES_END =========
+
 
     def __str__(self):
         return f"{self.reference_id} - {self.description[:30]}"

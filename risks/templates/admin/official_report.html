@@ -200,7 +200,9 @@
             <td>{{ risk.control_description|default:"Standard Controls" }}</td>
             <td>Mitigate</td>
             <td>{{ risk.risk_owner }}</td>
-            <td>{{ risk.risk_coordinator|default:"-" }}</td>
+            <td>{{ risk.risk_coordinator_name|default:"-" }}</td>
+
+
 
             <td class="col-residual" style="border: 1px solid #fff;">{{ risk.residual_rating }}</td>
         </tr>
