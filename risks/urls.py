@@ -14,4 +14,6 @@ urlpatterns = [
 
     path('draft/<int:risk_id>/edit/', views.edit_draft_risk, name='edit-draft-risk'),
     path('drafts/approve-all/', views.bulk_approve_drafts, name='bulk-approve-drafts'),
+
+    path('board-explanation/', views.board_explanation, name='board-explanation'),
 ]
