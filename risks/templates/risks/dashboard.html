@@ -80,14 +80,20 @@
 
             {% if user.is_staff %}
             <div class="mt-3">
-                <a href="{% url 'official_report' %}" target="_blank" class="btn btn-success shadow-sm px-4 fw-bold">
-                    <i class="fas fa-file-pdf me-2"></i> GENERATE OFFICIAL REPORT
-                </a>
+    <a href="{% url 'official_report' %}" target="_blank" class="btn btn-success shadow-sm px-4 fw-bold">
+        <i class="fas fa-file-pdf me-2"></i> GENERATE OFFICIAL REPORT
+    </a>
 
-                <a href="/ai-extract/" class="btn btn-warning shadow-sm px-4 fw-bold ms-2">
-                    🤖 AI EXTRACT (Paste KRI)
-                </a>
-            </div>
+    <a href="/ai-extract/" class="btn btn-warning shadow-sm px-4 fw-bold ms-2">
+        🤖 AI EXTRACT (Paste KRI)
+    </a>
+
+    <a href="{% url 'board-explanation' %}?filter={{ filter_type|default:'approved' }}{% if selected_area %}&area={{ selected_area|urlencode }}{% endif %}"
+       target="_blank"
+       class="btn btn-primary shadow-sm px-4 fw-bold ms-2">
+        🧾 BOARD EXPLANATION
+    </a>
+</div>
 
             <div class="text-center mt-3">
                 <a href="{% url 'bulk-approve-drafts' %}"
