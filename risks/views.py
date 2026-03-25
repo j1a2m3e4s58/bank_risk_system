@@ -813,5 +813,527 @@ def clear_all_risks(request):
 
     return redirect("dashboard")
 # ========= CLEAR_RISKS_END =========
+# ========= BOARD_EXPLANATION_START =========
+def _rating_counts(qs, field_name):
+    counts = {
+        "Critical": 0,
+        "Severe": 0,
+        "Moderate": 0,
+        "Sustainable": 0,
+    }
+    for item in qs:
+        value = getattr(item, field_name, "") or ""
+        if value in counts:
+            counts[value] += 1
+    return counts
 
 
+def _top_risk_themes(risks, limit=5):
+    keyword_map = {
+        "Fraud / Financial Crime": [
+            "fraud", "money laundering", "aml", "cft", "theft",
+            "identity theft", "misappropriation", "unauthorized"
+        ],
+        "Operational Process Breakdown": [
+            "process", "delay", "error", "breakdown", "overdue",
+            "documentation", "reconciliation", "processing"
+        ],
+        "Customer / Service Impact": [
+            "customer", "complaint", "service", "downtime",
+            "reputational", "reputation"
+        ],
+        "Regulatory / Compliance Exposure": [
+            "regulatory", "compliance", "penalty", "sanction",
+            "legal", "litigation", "breach"
+        ],
+        "Technology / Information Security": [
+            "system", "it", "ict", "data", "privacy", "breach",
+            "access", "security", "cyber", "information leakage"
+        ],
+        "Credit / Recovery Exposure": [
+            "credit", "loan", "recovery", "collections", "default"
+        ],
+    }
+
+    scores = {k: 0 for k in keyword_map.keys()}
+
+    for risk in risks:
+        combined = " ".join([
+            risk.description or "",
+            risk.caused_by or "",
+            risk.consequences or "",
+            risk.controls or "",
+        ]).lower()
+
+        for theme, words in keyword_map.items():
+            if any(word in combined for word in words):
+                scores[theme] += 1
+
+    ranked = [(theme, count) for theme, count in scores.items() if count > 0]
+    ranked.sort(key=lambda x: (-x[1], x[0]))
+    return ranked[:limit]
+
+
+def _sample_risks(risks, limit=5):
+    ranked = sorted(
+        risks,
+        key=lambda r: (
+            {"Critical": 0, "Severe": 1, "Moderate": 2, "Sustainable": 3}.get(r.residual_rating, 9),
+            {"Critical": 0, "Severe": 1, "Moderate": 2, "Sustainable": 3}.get(r.inherent_rating, 9),
+            r.reference_id
+        )
+    )
+    return ranked[:limit]
+
+
+def _build_board_narrative(area_name, risks):
+    total = len(risks)
+
+    if total == 0:
+        return {
+            "executive_summary": (
+                f"No risk records are currently available for {area_name or 'the selected department'}, "
+                "so a board-ready explanation cannot yet be generated."
+            ),
+            "inherent_summary": "No inherent risk profile is available because no risks were found.",
+            "residual_summary": "No residual risk profile is available because no risks were found.",
+            "control_effectiveness": "Control effectiveness cannot be assessed until risk records are available.",
+            "board_recommendation": (
+                "Management should ensure the department’s current risk register is populated and validated "
+                "before the next board reporting cycle."
+            ),
+            "top_themes": [],
+            "sample_risks": [],
+            "inherent_counts": {"Critical": 0, "Severe": 0, "Moderate": 0, "Sustainable": 0},
+            "residual_counts": {"Critical": 0, "Severe": 0, "Moderate": 0, "Sustainable": 0},
+            "improvement_count": 0,
+            "unchanged_count": 0,
+            "worsened_count": 0,
+        }
+
+    inherent_counts = _rating_counts(risks, "inherent_rating")
+    residual_counts = _rating_counts(risks, "residual_rating")
+
+    scale = {"Sustainable": 1, "Moderate": 2, "Severe": 3, "Critical": 4}
+    improvement_count = 0
+    unchanged_count = 0
+    worsened_count = 0
+
+    for risk in risks:
+        before = scale.get(risk.inherent_rating, 0)
+        after = scale.get(risk.residual_rating, 0)
+        if after < before:
+            improvement_count += 1
+        elif after == before:
+            unchanged_count += 1
+        else:
+            worsened_count += 1
+
+    inherent_high = inherent_counts["Critical"] + inherent_counts["Severe"]
+    residual_high = residual_counts["Critical"] + residual_counts["Severe"]
+
+    area_label = area_name or "Selected Department"
+
+    if inherent_high >= max(1, round(total * 0.5)):
+        inherent_tone = (
+            "The inherent risk profile is elevated, with a significant share of exposures falling within the "
+            "Critical and Severe bands before controls are applied."
+        )
+    elif inherent_high > 0:
+        inherent_tone = (
+            "The inherent risk profile shows a mixed position, with some material exposures in the higher bands "
+            "before controls are applied."
+        )
+    else:
+        inherent_tone = (
+            "The inherent risk profile is comparatively contained, with exposures concentrated mainly in the "
+            "Moderate and Sustainable bands before controls are applied."
+        )
+
+    if residual_high == 0:
+        residual_tone = (
+            "After controls, the residual risk profile appears well contained, with no remaining exposures in the "
+            "Critical or Severe bands."
+        )
+    elif residual_high < inherent_high:
+        residual_tone = (
+            "After controls, the residual risk profile improves relative to the inherent position, although some "
+            "higher-risk exposures remain and still require management attention."
+        )
+    else:
+        residual_tone = (
+            "After controls, the residual risk profile remains materially elevated, indicating that existing "
+            "mitigation measures may not yet be reducing exposure to the desired level."
+        )
+
+    if improvement_count >= max(1, round(total * 0.5)):
+        effectiveness_text = (
+            "Overall, the control environment appears to be having a meaningful moderating effect on risk exposure, "
+            "as a majority of risks reduce in rating from inherent to residual position."
+        )
+    elif improvement_count > 0:
+        effectiveness_text = (
+            "The control environment is providing partial mitigation benefit, but its impact is uneven across the "
+            "department’s risk universe."
+        )
+    else:
+        effectiveness_text = (
+            "The current control environment does not yet show clear evidence of risk reduction across the portfolio, "
+            "and further strengthening may be required."
+        )
+
+    if residual_counts["Critical"] > 0:
+        recommendation = (
+            "Board attention is recommended for the remaining Critical residual exposures. Management should present "
+            "targeted remediation actions, named accountabilities, and implementation timelines for those items."
+        )
+    elif residual_counts["Severe"] > 0:
+        recommendation = (
+            "The board may note that while controls are reducing exposure, some Severe residual risks remain. "
+            "Management should continue focused monitoring and strengthen controls in the affected areas."
+        )
+    else:
+        recommendation = (
+            "The board may note that the department’s residual exposure is presently within a more manageable range. "
+            "Management should sustain the current control discipline and continue periodic monitoring."
+        )
+
+    executive_summary = (
+        f"The risk assessment for {area_label} covers {total} identified risk item"
+        f"{'' if total == 1 else 's'}. Before controls, {inherent_counts['Critical']} risk(s) were rated Critical, "
+        f"{inherent_counts['Severe']} Severe, {inherent_counts['Moderate']} Moderate, and "
+        f"{inherent_counts['Sustainable']} Sustainable. After accounting for controls, the profile moved to "
+        f"{residual_counts['Critical']} Critical, {residual_counts['Severe']} Severe, "
+        f"{residual_counts['Moderate']} Moderate, and {residual_counts['Sustainable']} Sustainable. "
+        f"This indicates that {improvement_count} risk(s) improved, {unchanged_count} remained unchanged, "
+        f"and {worsened_count} worsened between the inherent and residual positions."
+    )
+
+    inherent_summary = (
+        f"For {area_label}, the inherent risk position reflects the level of exposure that exists before the full "
+        f"effect of controls is considered. {inherent_tone} This means the department is naturally exposed to "
+        f"operational, compliance, financial, or service-related pressures that could affect performance, customer "
+        f"confidence, regulatory standing, or loss outcomes if not actively managed."
+    )
+
+    residual_summary = (
+        f"The residual risk position reflects the level of exposure that remains after existing controls and response "
+        f"measures are considered. {residual_tone} In practical terms, this shows the extent to which current "
+        f"controls are helping management contain the department’s most significant risk drivers."
+    )
+
+    themes = _top_risk_themes(risks)
+    sample_risks = _sample_risks(risks)
+
+    return {
+        "executive_summary": executive_summary,
+        "inherent_summary": inherent_summary,
+        "residual_summary": residual_summary,
+        "control_effectiveness": effectiveness_text,
+        "board_recommendation": recommendation,
+        "top_themes": themes,
+        "sample_risks": sample_risks,
+        "inherent_counts": inherent_counts,
+        "residual_counts": residual_counts,
+        "improvement_count": improvement_count,
+        "unchanged_count": unchanged_count,
+        "worsened_count": worsened_count,
+    }
+
+
+@login_required
+def board_explanation(request):
+    selected_area = request.GET.get("area", "").strip()
+    filter_type = request.GET.get("filter", "approved").strip()
+
+    risks = RiskAssessment.objects.all().order_by("area_name", "reference_id")
+
+    available_areas = list(
+        RiskAssessment.objects.exclude(area_name__isnull=True)
+        .exclude(area_name__exact="")
+        .values_list("area_name", flat=True)
+        .distinct()
+    )
+
+    if selected_area:
+        risks = risks.filter(area_name=selected_area)
+
+    if filter_type == "draft":
+        risks = risks.filter(description__startswith="[DRAFT]")
+    elif filter_type == "approved":
+        risks = risks.exclude(description__startswith="[DRAFT]")
+
+    risk_list = list(risks)
+    narrative = _build_board_narrative(selected_area, risk_list)
+
+    context = {
+        "selected_area": selected_area,
+        "filter_type": filter_type,
+        "available_areas": available_areas,
+        "risks": risk_list,
+        **narrative,
+    }
+    return render(request, "risks/board_explanation.html", context)
+# ========= BOARD_EXPLANATION_END =========
+# ========= BOARD_EXPLANATION_START =========
+def _rating_counts(qs, field_name):
+    counts = {
+        "Critical": 0,
+        "Severe": 0,
+        "Moderate": 0,
+        "Sustainable": 0,
+    }
+    for item in qs:
+        value = getattr(item, field_name, "") or ""
+        if value in counts:
+            counts[value] += 1
+    return counts
+
+
+def _top_risk_themes(risks, limit=5):
+    keyword_map = {
+        "Fraud / Financial Crime": [
+            "fraud", "money laundering", "aml", "cft", "theft",
+            "identity theft", "misappropriation", "unauthorized"
+        ],
+        "Operational Process Breakdown": [
+            "process", "delay", "error", "breakdown", "overdue",
+            "documentation", "reconciliation", "processing"
+        ],
+        "Customer / Service Impact": [
+            "customer", "complaint", "service", "downtime",
+            "reputational", "reputation"
+        ],
+        "Regulatory / Compliance Exposure": [
+            "regulatory", "compliance", "penalty", "sanction",
+            "legal", "litigation", "breach"
+        ],
+        "Technology / Information Security": [
+            "system", "it", "ict", "data", "privacy", "breach",
+            "access", "security", "cyber", "information leakage"
+        ],
+        "Credit / Recovery Exposure": [
+            "credit", "loan", "recovery", "collections", "default"
+        ],
+    }
+
+    scores = {k: 0 for k in keyword_map.keys()}
+
+    for risk in risks:
+        combined = " ".join([
+            risk.description or "",
+            risk.caused_by or "",
+            risk.consequences or "",
+            risk.controls or "",
+        ]).lower()
+
+        for theme, words in keyword_map.items():
+            if any(word in combined for word in words):
+                scores[theme] += 1
+
+    ranked = [(theme, count) for theme, count in scores.items() if count > 0]
+    ranked.sort(key=lambda x: (-x[1], x[0]))
+    return ranked[:limit]
+
+
+def _sample_risks(risks, limit=5):
+    ranked = sorted(
+        risks,
+        key=lambda r: (
+            {"Critical": 0, "Severe": 1, "Moderate": 2, "Sustainable": 3}.get(r.residual_rating, 9),
+            {"Critical": 0, "Severe": 1, "Moderate": 2, "Sustainable": 3}.get(r.inherent_rating, 9),
+            r.reference_id
+        )
+    )
+    return ranked[:limit]
+
+
+def _build_board_narrative(area_name, risks):
+    total = len(risks)
+
+    if total == 0:
+        return {
+            "executive_summary": (
+                f"No risk records are currently available for {area_name or 'the selected department'}, "
+                "so a board-ready explanation cannot yet be generated."
+            ),
+            "inherent_summary": "No inherent risk profile is available because no risks were found.",
+            "residual_summary": "No residual risk profile is available because no risks were found.",
+            "control_effectiveness": "Control effectiveness cannot be assessed until risk records are available.",
+            "board_recommendation": (
+                "Management should ensure the department’s current risk register is populated and validated "
+                "before the next board reporting cycle."
+            ),
+            "top_themes": [],
+            "sample_risks": [],
+            "inherent_counts": {"Critical": 0, "Severe": 0, "Moderate": 0, "Sustainable": 0},
+            "residual_counts": {"Critical": 0, "Severe": 0, "Moderate": 0, "Sustainable": 0},
+            "improvement_count": 0,
+            "unchanged_count": 0,
+            "worsened_count": 0,
+        }
+
+    inherent_counts = _rating_counts(risks, "inherent_rating")
+    residual_counts = _rating_counts(risks, "residual_rating")
+
+    scale = {"Sustainable": 1, "Moderate": 2, "Severe": 3, "Critical": 4}
+    improvement_count = 0
+    unchanged_count = 0
+    worsened_count = 0
+
+    for risk in risks:
+        before = scale.get(risk.inherent_rating, 0)
+        after = scale.get(risk.residual_rating, 0)
+        if after < before:
+            improvement_count += 1
+        elif after == before:
+            unchanged_count += 1
+        else:
+            worsened_count += 1
+
+    inherent_high = inherent_counts["Critical"] + inherent_counts["Severe"]
+    residual_high = residual_counts["Critical"] + residual_counts["Severe"]
+
+    area_label = area_name or "Selected Department"
+
+    if inherent_high >= max(1, round(total * 0.5)):
+        inherent_tone = (
+            "The inherent risk profile is elevated, with a significant share of exposures falling within the "
+            "Critical and Severe bands before controls are applied."
+        )
+    elif inherent_high > 0:
+        inherent_tone = (
+            "The inherent risk profile shows a mixed position, with some material exposures in the higher bands "
+            "before controls are applied."
+        )
+    else:
+        inherent_tone = (
+            "The inherent risk profile is comparatively contained, with exposures concentrated mainly in the "
+            "Moderate and Sustainable bands before controls are applied."
+        )
+
+    if residual_high == 0:
+        residual_tone = (
+            "After controls, the residual risk profile appears well contained, with no remaining exposures in the "
+            "Critical or Severe bands."
+        )
+    elif residual_high < inherent_high:
+        residual_tone = (
+            "After controls, the residual risk profile improves relative to the inherent position, although some "
+            "higher-risk exposures remain and still require management attention."
+        )
+    else:
+        residual_tone = (
+            "After controls, the residual risk profile remains materially elevated, indicating that existing "
+            "mitigation measures may not yet be reducing exposure to the desired level."
+        )
+
+    if improvement_count >= max(1, round(total * 0.5)):
+        effectiveness_text = (
+            "Overall, the control environment appears to be having a meaningful moderating effect on risk exposure, "
+            "as a majority of risks reduce in rating from inherent to residual position."
+        )
+    elif improvement_count > 0:
+        effectiveness_text = (
+            "The control environment is providing partial mitigation benefit, but its impact is uneven across the "
+            "department’s risk universe."
+        )
+    else:
+        effectiveness_text = (
+            "The current control environment does not yet show clear evidence of risk reduction across the portfolio, "
+            "and further strengthening may be required."
+        )
+
+    if residual_counts["Critical"] > 0:
+        recommendation = (
+            "Board attention is recommended for the remaining Critical residual exposures. Management should present "
+            "targeted remediation actions, named accountabilities, and implementation timelines for those items."
+        )
+    elif residual_counts["Severe"] > 0:
+        recommendation = (
+            "The board may note that while controls are reducing exposure, some Severe residual risks remain. "
+            "Management should continue focused monitoring and strengthen controls in the affected areas."
+        )
+    else:
+        recommendation = (
+            "The board may note that the department’s residual exposure is presently within a more manageable range. "
+            "Management should sustain the current control discipline and continue periodic monitoring."
+        )
+
+    executive_summary = (
+        f"The risk assessment for {area_label} covers {total} identified risk item"
+        f"{'' if total == 1 else 's'}. Before controls, {inherent_counts['Critical']} risk(s) were rated Critical, "
+        f"{inherent_counts['Severe']} Severe, {inherent_counts['Moderate']} Moderate, and "
+        f"{inherent_counts['Sustainable']} Sustainable. After accounting for controls, the profile moved to "
+        f"{residual_counts['Critical']} Critical, {residual_counts['Severe']} Severe, "
+        f"{residual_counts['Moderate']} Moderate, and {residual_counts['Sustainable']} Sustainable. "
+        f"This indicates that {improvement_count} risk(s) improved, {unchanged_count} remained unchanged, "
+        f"and {worsened_count} worsened between the inherent and residual positions."
+    )
+
+    inherent_summary = (
+        f"For {area_label}, the inherent risk position reflects the level of exposure that exists before the full "
+        f"effect of controls is considered. {inherent_tone} This means the department is naturally exposed to "
+        f"operational, compliance, financial, or service-related pressures that could affect performance, customer "
+        f"confidence, regulatory standing, or loss outcomes if not actively managed."
+    )
+
+    residual_summary = (
+        f"The residual risk position reflects the level of exposure that remains after existing controls and response "
+        f"measures are considered. {residual_tone} In practical terms, this shows the extent to which current "
+        f"controls are helping management contain the department’s most significant risk drivers."
+    )
+
+    themes = _top_risk_themes(risks)
+    sample_risks = _sample_risks(risks)
+
+    return {
+        "executive_summary": executive_summary,
+        "inherent_summary": inherent_summary,
+        "residual_summary": residual_summary,
+        "control_effectiveness": effectiveness_text,
+        "board_recommendation": recommendation,
+        "top_themes": themes,
+        "sample_risks": sample_risks,
+        "inherent_counts": inherent_counts,
+        "residual_counts": residual_counts,
+        "improvement_count": improvement_count,
+        "unchanged_count": unchanged_count,
+        "worsened_count": worsened_count,
+    }
+
+
+@login_required
+def board_explanation(request):
+    selected_area = request.GET.get("area", "").strip()
+    filter_type = request.GET.get("filter", "approved").strip()
+
+    risks = RiskAssessment.objects.all().order_by("area_name", "reference_id")
+
+    available_areas = list(
+        RiskAssessment.objects.exclude(area_name__isnull=True)
+        .exclude(area_name__exact="")
+        .values_list("area_name", flat=True)
+        .distinct()
+    )
+
+    if selected_area:
+        risks = risks.filter(area_name=selected_area)
+
+    if filter_type == "draft":
+        risks = risks.filter(description__startswith="[DRAFT]")
+    elif filter_type == "approved":
+        risks = risks.exclude(description__startswith="[DRAFT]")
+
+    risk_list = list(risks)
+    narrative = _build_board_narrative(selected_area, risk_list)
+
+    context = {
+        "selected_area": selected_area,
+        "filter_type": filter_type,
+        "available_areas": available_areas,
+        "risks": risk_list,
+        **narrative,
+    }
+    return render(request, "risks/board_explanation.html", context)
+# ========= BOARD_EXPLANATION_END =========
